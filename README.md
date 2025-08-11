@@ -1,7 +1,7 @@
 # esp_ble
 Simple iOS snippet that transmits the iPhone location data to an ESP32 over Bluetooth Low Energy.
 
-![Screenshot](media/screenshot.png)
+<img src="media/screenshot.png" width="300" alt="Screenshot">
 
 IMPORTANT NOTE: this is not a safe way to connect to a Bluetooth device. 
 
@@ -15,7 +15,7 @@ To change UUIDs, update both:
 - **ESP32**: `main.cpp` → `SERVICE_UUID` and `CHARACTERISTIC_UUID` defines
 
 ## Permissions Required
-The following permissions must be enabled on the iOS device (see esp-ble-Info.plist):
+The following permissions must be enabled on the iOS device (see [`esp-ble-Info.plist`](esp-ble-Info.plist)):
 - Bluetooth (device communication)
 - Location When In Use (GPS coordinates)
 

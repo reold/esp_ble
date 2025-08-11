@@ -256,6 +256,13 @@
 				DEVELOPMENT_TEAM = 4TJCQS85HV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "esp-ble-Info.plist";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Needs bluetooth to connect to the ESP32";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Needs bluetooth to connect to the ESP32";
+				INFOPLIST_KEY_NSFileProviderDomainUsageDescription = "";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Need location to update GPS coordinates on ESP32";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Need location";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -284,6 +291,13 @@
 				DEVELOPMENT_TEAM = 4TJCQS85HV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "esp-ble-Info.plist";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Needs bluetooth to connect to the ESP32";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Needs bluetooth to connect to the ESP32";
+				INFOPLIST_KEY_NSFileProviderDomainUsageDescription = "";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Need location to update GPS coordinates on ESP32";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Need location";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

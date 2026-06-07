@@ -10,8 +10,19 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     override init() {
         super.init()
         locationManager.delegate = self
-        locationManager.requestWhenInUseAuthorization()
+        
+        // 1. Request "Always" authorization to allow tracking when screen is locked/app minimised
+        locationManager.requestAlwaysAuthorization()
+        
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        // 2. Set distance filter to avoid spamming the ESP32 when standing still (e.g. 5 meters)
+        locationManager.distanceFilter = 5.0
+        
+        // 3. ESSENTIAL: Tell iOS this app must receive locations in the background explicitly
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.showsBackgroundLocationIndicator = true
+        locationManager.pausesLocationUpdatesAutomatically = false
+        
         locationManager.startUpdatingLocation()
     }
     
@@ -24,15 +35,23 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         }
     }
     
-    func currentPayload() -> String {
-        guard let location = locationManager.location else { return "LOC:pending" }
+    // 4. Triggered automatically by iOS (even in the background) when location changes
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        
         let coordinate = location.coordinate
         let formatter = ISO8601DateFormatter()
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         let timestamp = formatter.string(from: location.timestamp)
+        
+        // Update the published property, which triggers the reactive sink in BluetoothViewModel
         let payload = "GPS:\(coordinate.latitude),\(coordinate.longitude),ts=\(timestamp)"
         latestText = payload
-        return payload
+    }
+    
+    // Retained for manual sending if necessary
+    func currentPayload() -> String {
+        return latestText
     }
 }
 
@@ -51,8 +70,8 @@ final class BluetoothViewModel: NSObject, ObservableObject {
     private var peripheral: CBPeripheral?
     private var writeCharacteristic: CBCharacteristic?
     
-    private var sendTimer: Timer?
     private var scanTimer: Timer?
+    // Note: sendTimer removed completely — timers don't run in iOS background.
     
     private let locationManager = LocationManager()
     private var locationSubscription: AnyCancellable?
@@ -60,8 +79,16 @@ final class BluetoothViewModel: NSObject, ObservableObject {
     override init() {
         super.init()
         central = CBCentralManager(delegate: self, queue: .main)
+        
+        // 5. Instantly react to background location updates coming from LocationManager
         locationSubscription = locationManager.$latestText.sink { [weak self] text in
             self?.dataTransfer.locationText = text
+            
+            // If connected, automatically push the location to ESP32!
+            // iOS gives us brief execution time here even when the screen is locked.
+            if self?.connectionState == .connected {
+                self?.sendData(text)
+            }
         }
     }
     
@@ -108,8 +135,6 @@ final class BluetoothViewModel: NSObject, ObservableObject {
     }
     
     func disconnect() {
-        sendTimer?.invalidate()
-        sendTimer = nil
         if let peripheral = peripheral {
             central.cancelPeripheralConnection(peripheral)
         }
@@ -122,7 +147,10 @@ final class BluetoothViewModel: NSObject, ObservableObject {
     
     func sendLocation() {
         let payload = locationManager.currentPayload()
-        sendData(payload)
+        // Prevent sending "Waiting for location..." to ESP32 before hardware syncs
+        if !payload.starts(with: "Waiting") && !payload.starts(with: "LOC:pending") {
+            sendData(payload)
+        }
     }
     
     private func resetConnection() {
@@ -134,17 +162,8 @@ final class BluetoothViewModel: NSObject, ObservableObject {
         deviceInfo.writeWithoutResponse = false
     }
     
-    private func startSendingLoop() {
-        sendTimer?.invalidate()
-        sendTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            self?.sendLocation()
-        }
-        sendLocation()
-    }
-    
     private func sendData(_ string: String) {
         guard let peripheral = peripheral, let characteristic = writeCharacteristic else {
-            status = "Not connected"
             return
         }
         
@@ -156,11 +175,12 @@ final class BluetoothViewModel: NSObject, ObservableObject {
         deviceInfo.writeWithoutResponse = (writeType == .withoutResponse)
         deviceInfo.mtuBytes = peripheral.maximumWriteValueLength(for: writeType)
         
-        dataTransfer.lastSent = string
-        dataTransfer.lastSentBytes = data.count
-        dataTransfer.totalSentBytes += data.count
-        
-        status = "Connected"
+        // Ensure UI updates aren't conflicting
+        DispatchQueue.main.async { [weak self] in
+            self?.dataTransfer.lastSent = string
+            self?.dataTransfer.lastSentBytes = data.count
+            self?.dataTransfer.totalSentBytes += data.count
+        }
     }
 }
 
@@ -245,7 +265,9 @@ extension BluetoothViewModel: CBPeripheralDelegate {
             deviceInfo.mtuBytes = peripheral.maximumWriteValueLength(for: deviceInfo.writeWithoutResponse ? .withoutResponse : .withResponse)
             connectionState = .connected
             status = connectionState.statusText
-            startSendingLoop()
+            
+            // We no longer need the timer; just send an immediate payload to get it started
+            sendLocation()
         } else {
             status = "Characteristic not found"
         }

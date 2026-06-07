@@ -1,7 +1,7 @@
 name: Build iOS IPA
 
 on:
-  workflow_dispatch: # manual trigger
+  workflow_dispatch:
 
 jobs:
   build-ipa:
@@ -11,12 +11,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-
-      # Optional: verify scheme exists
-      - name: List schemes
-        run: xcodebuild -list -project esp_ble.xcodeproj
+      # Optional: verify the active Xcode version
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Build archive (unsigned)
         run: |
